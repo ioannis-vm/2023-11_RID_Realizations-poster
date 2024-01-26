@@ -13,6 +13,7 @@ from src.handle_data import load_dataset
 from src.handle_data import only_drifts
 from src.handle_data import remove_collapse
 from doc.poster.src import common
+from src.util import store_info
 
 FIG_SCALE = 3.125
 
@@ -76,7 +77,11 @@ def make_plot(models):
     ax.scatter(
         data.loc[hz, 'RID'],
         data.loc[hz, 'PID'],
-        s=12.0, facecolor='none', edgecolor='red', alpha=0.5)
+        s=12.0, facecolor='none', edgecolor='green')
+    ax.scatter(
+        data.loc[data.index.get_level_values(0) != hz]['RID'],
+        data.loc[data.index.get_level_values(0) != hz]['PID'],
+        s=12.0, facecolor='none', edgecolor='black', alpha=0.1)
 
     model.calculate_rolling_quantiles()
 
@@ -173,7 +178,7 @@ def make_plot(models):
     fig.delaxes(ax)
 
     fig.tight_layout()
-    # plt.savefig('doc/poster/figures/scatter_with_quantiles.svg')
+    # plt.savefig(store_info('doc/poster/figures/scatter_with_quantiles.svg'))
     plt.show()
 
 
@@ -185,4 +190,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-main()

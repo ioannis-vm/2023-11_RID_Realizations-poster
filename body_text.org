@@ -1,0 +1,30 @@
+* Figure body text
+
+** DONE Main Idea
+In FEMAP-58 applications, residual story drifts should be properly sampled to avoid biased loss estimates. This is often overlooked in practice. We offer an approach that addresses this issue.
+
+** DONE Introduction
+Part of a FEMA P-58 loss estimation is the determination of instances of building replacement due to excessive Residual Interstory Drift (RID) [1]. Such instances are identified using a residual drift fragility curve expressed in terms of the RID of each story. RID distribution assumptions can have a profound impact on the results. We propose an adaptive, robust sampling scheme that enables utilizing RIDs obtained during dynamic analysis.
+
+** Methods
+Fitting: A multivariate lognormal is fitted to the Peak Floor Accelerations (PFAs), Peak Interstory Drifts (PIDs), Peak Floor Velocities (PFVs), and any other suitable Engineering Demand Parameter (EDP). A RID|PID conditional density is fitted separately to all available analysis results of each story (combining stripes):
+\begin{equation*}
+(y|x) \sim \textrm{Weibull}\left(\kappa, \lambda(x)\right)
+\end{equation*}
+\begin{equation*}
+\lambda(x) =
+\begin{cases}
+0          &  x < x_0 \\
+m(x - x_0) &  x \geq x_0
+\end{cases}
+\end{equation*}
+where y is the RID, x is the PID, κ the shape parameter, and λ the scale parameter. κ, m and x0 are determined during fitting.
+Sampling: After sampling EDPs from the multivariate lognormal, RIDs are sampled from the individually fitted conditional density model of each story using the PID sample.
+** Results
+We evaluated the applicability of the method using analysis results from a broad set of structural models. Fig 1 shows a 9-story risk category II Special Concentrically-Braced Frame (SCBF) model in its initial and residual states. Focusing on the 3rd story, Fig 2 shows the analysis results and the conditional quantiles of different models. For the FEMA P-58 model we specified a yield drift of 0.4% based on modal pushover analysis results. The CDF curves are associated with a single stripe, of which the analysis data are highlighted in green. In Fig 3 we see that the proposed model can preserve the correlation structure of RID realizations of adjacent stories, when including RIDs in the multivariate lognormal fit fails to do so. Finally, Fig 4 illustrates the level of bias that can be introduced if RID sampling is done using an improperly fitted model. We are currently fine-tuning the fitting process and validating the model.
+
+** Conclusions
+We offer a model for RID generation that features several enhancements over existing methods. It enables the utilization of RID results derived from structural analysis, and adapts to the particular behavior of each story without requiring manual parameter tuning. It accurately captures the RID distribution and its correlation structure. The model will soon become a feature of /pelicun/, making it easily accessible to the natural hazards engineering community. 
+
+** References
+[1] Federal Emergency Management Agency (FEMA), 2012. /Seismic Performance Assessment of Buildings, Volume 1 - Methodology/, Washington, DC.

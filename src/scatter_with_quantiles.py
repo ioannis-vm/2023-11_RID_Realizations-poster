@@ -3,9 +3,11 @@ Scatter plots with fitted distributions
    - [single archetype], [single story]
    - histogram of marginals on the sides
    - a single distribution (Weibull)
+
 """
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 from src.models import Model_0_P58
 from src.models import Model_1_Weibull
@@ -15,7 +17,6 @@ from src.handle_data import remove_collapse
 from doc.poster.src import common
 from src.util import store_info
 
-FIG_SCALE = 3.125
 
 
 def load_data():
@@ -24,7 +25,6 @@ def load_data():
 
 
 def fit_models(data):
-
     models = {}
 
     story = '3'
@@ -37,7 +37,7 @@ def fit_models(data):
     model = Model_1_Weibull()
     model.add_data(pid_vals, rid_vals)
     model.censoring_limit = 0.0005
-    model.fit(method='mle')
+    model.fit(method='quantiles')
 
     num_realizations = 10000
     pid_sim = np.random.choice(pid_vals, size=num_realizations, replace=True)
@@ -45,11 +45,17 @@ def fit_models(data):
 
     model_fema = Model_0_P58()
     model_fema.add_data(pid_vals, rid_vals)
-    model_fema.fit(delta_y=0.004, beta=0.60)
+    model_fema.fit(delta_y=0.4 / 100.00, beta=0.80)
     model_fema.generate_rid_samples(pid_sim)
+
+    model_fema_opt = Model_0_P58()
+    model_fema_opt.add_data(pid_vals, rid_vals)
+    model_fema_opt.fit(delta_y=0.01082, beta=0.80)
+    model_fema_opt.generate_rid_samples(pid_sim)
 
     models['Weibull'] = model
     models['FEMA P-58'] = model_fema
+    models['FEMA P-58 optimized'] = model_fema_opt
 
     return models
 
@@ -60,28 +66,36 @@ def make_plot(models):
 
     model = models['Weibull']
     model_p58 = models['FEMA P-58']
+    model_p58_opt = models['FEMA P-58 optimized']
 
     plt.close()
     fig, axs = plt.subplots(
+        3,
         2,
-        2,
-        figsize=(9.00 / FIG_SCALE, 9.0 / FIG_SCALE),
-        gridspec_kw={'width_ratios': [5, 1], 'height_ratios': [1, 5]},
+        figsize=(9.00 / common.FIG_SCALE, 9.0 / common.FIG_SCALE),
+        gridspec_kw={'width_ratios': [5, 1], 'height_ratios': [3, 1, 5]},
     )
 
-
-    ax = axs[1, 0]
+    # main plot
+    ax = axs[2, 0]
 
     data = load_data()[("scbf", "9", "ii", common.story)].dropna().stack(level=0)
     hz = common.hazard_level_of_focus
     ax.scatter(
         data.loc[hz, 'RID'],
         data.loc[hz, 'PID'],
-        s=12.0, facecolor='none', edgecolor='green')
+        s=12.0,
+        facecolor='none',
+        edgecolor='green',
+    )
     ax.scatter(
         data.loc[data.index.get_level_values(0) != hz]['RID'],
         data.loc[data.index.get_level_values(0) != hz]['PID'],
-        s=12.0, facecolor='none', edgecolor='black', alpha=0.1)
+        s=12.0,
+        facecolor='none',
+        edgecolor='black',
+        alpha=0.1,
+    )
 
     model.calculate_rolling_quantiles()
 
@@ -94,7 +108,7 @@ def make_plot(models):
     model_rid_20 = model.evaluate_inverse_cdf(0.20, model_pid)
     model_rid_80 = model.evaluate_inverse_cdf(0.80, model_pid)
 
-    ax.plot(model_rid_50, model_pid, 'C0', label='Weibull', zorder=10)
+    ax.plot(model_rid_50, model_pid, 'C0', label='Conditional Weibull', zorder=10)
     ax.plot(model_rid_20, model_pid, 'C0', linestyle='dashed', zorder=10)
     ax.plot(model_rid_80, model_pid, 'C0', linestyle='dashed', zorder=10)
 
@@ -106,7 +120,15 @@ def make_plot(models):
     ax.plot(model_rid_20, model_pid, 'C1', linestyle='dashed', zorder=5)
     ax.plot(model_rid_80, model_pid, 'C1', linestyle='dashed', zorder=5)
 
-    ax.legend()
+    model_rid_50 = model_p58_opt.evaluate_inverse_cdf(0.50, model_pid)
+    model_rid_20 = model_p58_opt.evaluate_inverse_cdf(0.20, model_pid)
+    model_rid_80 = model_p58_opt.evaluate_inverse_cdf(0.80, model_pid)
+
+    ax.plot(model_rid_50, model_pid, 'lightgrey', zorder=5)
+    ax.plot(model_rid_20, model_pid, 'lightgrey', linestyle='dashed', zorder=5)
+    ax.plot(model_rid_80, model_pid, 'lightgrey', linestyle='dashed', zorder=5)
+
+    ax.legend(fontsize='6')
 
     ax.axvline(x=model.censoring_limit, color='black', linestyle='dotted')
 
@@ -120,7 +142,8 @@ def make_plot(models):
     ax.set_yticklabels([f'{x*100.00:.1f}%' for x in ax.get_yticks().tolist()])
     ax.grid(which='both', linestyle='dashed', linewidth=0.30)
 
-    ax = axs[1, 1]
+    # histogram of PIDs
+    ax = axs[2, 1]
 
     ax.hist(
         model.raw_pid,
@@ -128,7 +151,7 @@ def make_plot(models):
         orientation='horizontal',
         density=True,
         edgecolor='black',
-        facecolor='white',
+        facecolor='lightgrey',
         zorder=10,
         range=(0, ylim[1]),
     )
@@ -144,7 +167,8 @@ def make_plot(models):
     ax.set(ylim=ylim)
     ax.grid(which='both', linestyle='dashed', linewidth=0.30, zorder=-100)
 
-    ax = axs[0, 0]
+    # histogram of RIDs
+    ax = axs[1, 0]
 
     bins = np.concatenate(
         (
@@ -158,7 +182,7 @@ def make_plot(models):
         bins=bins,
         density=True,
         edgecolor='black',
-        facecolor='white',
+        facecolor='lightgrey',
         zorder=10,
         range=(0, xlim[1]),
     )
@@ -172,14 +196,38 @@ def make_plot(models):
     ax.set_yticks([])
     ax.set_yticklabels([])
     ax.set(xlim=xlim)
+    ax.set(ylim=(0.00, 250.00))
     ax.grid(which='both', linestyle='dashed', linewidth=0.30, zorder=-100)
 
-    ax = axs[0, 1]
-    fig.delaxes(ax)
+    # ecdf plot
+    ax = axs[0, 0]
+
+    vals = np.random.choice(data.loc[hz, 'PID'].values, size=10000, replace=True)
+    models['Weibull'].generate_rid_samples(vals)
+    models['FEMA P-58'].generate_rid_samples(vals)
+    models['FEMA P-58 optimized'].generate_rid_samples(vals)
+
+    sns.ecdfplot(data.loc[hz, 'RID'], ax=ax, label='Empirical', color='black')
+    sns.ecdfplot(models['FEMA P-58 optimized'].sim_rid, ax=ax, color='lightgrey')
+    sns.ecdfplot(
+        models['Weibull'].sim_rid, ax=ax, label='Conditional Weibull', color='C0'
+    )
+    sns.ecdfplot(models['FEMA P-58'].sim_rid, ax=ax, label='FEMA P-58', color='C1')
+    ax.set(xlim=xlim, ylabel='CDF', xlabel=None)
+    ax.set_xticklabels([f'{x*100.00:.1f}%' for x in ax.get_xticks().tolist()])
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.grid(which='both', linestyle='dashed', linewidth=0.30)
+    ax.set_xticklabels([])
+
+    # remove other axs
+    fig.delaxes(axs[0, 1])
+    fig.delaxes(axs[1, 1])
 
     fig.tight_layout()
-    # plt.savefig(store_info('doc/poster/figures/scatter_with_quantiles.svg'))
-    plt.show()
+    plt.savefig(store_info('doc/poster/figures/scatter_with_quantiles.svg'))
+
+    # plt.show()
 
 
 def main():

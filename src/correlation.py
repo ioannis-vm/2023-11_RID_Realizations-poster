@@ -6,7 +6,6 @@ approaches
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from pelicun.assessment import Assessment
 from src import models
 from src.handle_data import load_dataset
@@ -109,39 +108,42 @@ def main():
     plt.close()
     fig, ax = plt.subplots(figsize=(9.00 / common.FIG_SCALE, 5.5 / common.FIG_SCALE))
     ax.scatter(
-        demand_sample_df.loc[:, ('RID', story_dict['i'], '1')],
-        demand_sample_df.loc[:, ('RID', story_dict['j'], '1')],
-        color='C4',
-        alpha=0.50,
+        demand_sample_df.loc[:, ('RID', story_dict['i'], '1')].values[::3],
+        demand_sample_df.loc[:, ('RID', story_dict['j'], '1')].values[::3],
+        color='C1',
         label='Direct fit',
-        marker='1',
-        s=2
+        marker='.',
+        s=1,
     )
     ax.scatter(
-        rid_sample_df.xs(story_dict['i'], level='story', axis=1).stack(),
-        rid_sample_df.xs(story_dict['j'], level='story', axis=1).stack(),
-        color='C0',
-        alpha=0.50,
-        label='Conditional Weibull',
-        marker='2',
-        s=2
-    )
-    ax.scatter(
-        df.stack(level=4).loc[:, ('scbf', '9', 'ii', story_dict['i'], 'RID')],
-        df.stack(level=4).loc[:, ('scbf', '9', 'ii', story_dict['j'], 'RID')],
+        df.stack(level=4)
+        .loc[:, ('scbf', '9', 'ii', story_dict['i'], 'RID')]
+        .values[::3],
+        df.stack(level=4)
+        .loc[:, ('scbf', '9', 'ii', story_dict['j'], 'RID')]
+        .values[::3],
         color='black',
         label='Empirical',
-        alpha=0.50,
-        marker='3',
-        s=2
+        marker='.',
+        s=1,
+    )
+    ax.scatter(
+        rid_sample_df.xs(story_dict['i'], level='story', axis=1).stack().values[::3],
+        rid_sample_df.xs(story_dict['j'], level='story', axis=1).stack().values[::3],
+        color='C0',
+        label='Conditional Weibull',
+        marker='.',
+        s=1,
     )
     ax.plot([0.00, 1.00], [0.00, 1.00], linestyle='dashed', color='black')
-    ax.set(xlim=(0.00, 0.026), ylim=(0.00, 0.026))
+    ax.set(xlim=(-0.001, 0.026), ylim=(-0.001, 0.026))
     ax.set(xlabel=f'RID, story {story_dict["i"]}')
     ax.set(ylabel=f'RID, story {story_dict["j"]}')
     ax.grid(which='both', linewidth=0.30, linestyle='dashed')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
+    ax.set_xticklabels([f'{x*100.00:.1f}%' for x in ax.get_xticks().tolist()])
+    ax.set_yticklabels([f'{x*100.00:.1f}%' for x in ax.get_yticks().tolist()])
     plt.legend()
     plt.subplots_adjust(
         left=0.208, bottom=0.303, right=0.958, top=0.932, wspace=0.2, hspace=0.2

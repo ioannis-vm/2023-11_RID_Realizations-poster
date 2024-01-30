@@ -48,14 +48,8 @@ def fit_models(data):
     model_fema.fit(delta_y=0.4 / 100.00, beta=0.80)
     model_fema.generate_rid_samples(pid_sim)
 
-    model_fema_opt = Model_0_P58()
-    model_fema_opt.add_data(pid_vals, rid_vals)
-    model_fema_opt.fit(delta_y=0.01082, beta=0.80)
-    model_fema_opt.generate_rid_samples(pid_sim)
-
     models['Weibull'] = model
     models['FEMA P-58'] = model_fema
-    models['FEMA P-58 optimized'] = model_fema_opt
 
     return models
 
@@ -66,7 +60,6 @@ def make_plot(models):
 
     model = models['Weibull']
     model_p58 = models['FEMA P-58']
-    model_p58_opt = models['FEMA P-58 optimized']
 
     plt.close()
     fig, axs = plt.subplots(
@@ -84,17 +77,16 @@ def make_plot(models):
     ax.scatter(
         data.loc[hz, 'RID'],
         data.loc[hz, 'PID'],
-        s=12.0,
-        facecolor='none',
-        edgecolor='green',
+        color='green',
+        marker='.',
+        s=4
     )
     ax.scatter(
-        data.loc[data.index.get_level_values(0) != hz]['RID'],
-        data.loc[data.index.get_level_values(0) != hz]['PID'],
-        s=12.0,
-        facecolor='none',
-        edgecolor='black',
-        alpha=0.1,
+        data['RID'],
+        data['PID'],
+        color='black',
+        marker='.',
+        s=0.1
     )
 
     model.calculate_rolling_quantiles()
@@ -119,14 +111,6 @@ def make_plot(models):
     ax.plot(model_rid_50, model_pid, 'C1', label='FEMA P-58', zorder=5)
     ax.plot(model_rid_20, model_pid, 'C1', linestyle='dashed', zorder=5)
     ax.plot(model_rid_80, model_pid, 'C1', linestyle='dashed', zorder=5)
-
-    model_rid_50 = model_p58_opt.evaluate_inverse_cdf(0.50, model_pid)
-    model_rid_20 = model_p58_opt.evaluate_inverse_cdf(0.20, model_pid)
-    model_rid_80 = model_p58_opt.evaluate_inverse_cdf(0.80, model_pid)
-
-    ax.plot(model_rid_50, model_pid, 'lightgrey', zorder=5)
-    ax.plot(model_rid_20, model_pid, 'lightgrey', linestyle='dashed', zorder=5)
-    ax.plot(model_rid_80, model_pid, 'lightgrey', linestyle='dashed', zorder=5)
 
     ax.legend(fontsize='6')
 
@@ -205,10 +189,8 @@ def make_plot(models):
     vals = np.random.choice(data.loc[hz, 'PID'].values, size=10000, replace=True)
     models['Weibull'].generate_rid_samples(vals)
     models['FEMA P-58'].generate_rid_samples(vals)
-    models['FEMA P-58 optimized'].generate_rid_samples(vals)
 
     sns.ecdfplot(data.loc[hz, 'RID'], ax=ax, label='Empirical', color='black')
-    sns.ecdfplot(models['FEMA P-58 optimized'].sim_rid, ax=ax, color='lightgrey')
     sns.ecdfplot(
         models['Weibull'].sim_rid, ax=ax, label='Conditional Weibull', color='C0'
     )
@@ -226,7 +208,6 @@ def make_plot(models):
 
     fig.tight_layout()
     plt.savefig(store_info('doc/poster/figures/scatter_with_quantiles.svg'))
-
     # plt.show()
 
 

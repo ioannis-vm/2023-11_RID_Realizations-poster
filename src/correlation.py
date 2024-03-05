@@ -136,14 +136,20 @@ def main():
         s=1,
     )
     ax.plot([0.00, 1.00], [0.00, 1.00], linestyle='dashed', color='black')
+    ax.set_xticks(
+        np.arange(-0.005, 0.035, 0.005),
+        labels=[f'{x*100.00:.1f}%' for x in np.arange(-0.005, 0.035, 0.005)]
+    )
+    ax.set_yticks(
+        np.arange(-0.010, 0.035, 0.010),
+        labels=[f'{x*100.00:.1f}%' for x in np.arange(-0.010, 0.035, 0.010)]
+    )
     ax.set(xlim=(-0.001, 0.026), ylim=(-0.001, 0.026))
     ax.set(xlabel=f'RID, story {story_dict["i"]}')
     ax.set(ylabel=f'RID, story {story_dict["j"]}')
     ax.grid(which='both', linewidth=0.30, linestyle='dashed')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    ax.set_xticklabels([f'{x*100.00:.1f}%' for x in ax.get_xticks().tolist()])
-    ax.set_yticklabels([f'{x*100.00:.1f}%' for x in ax.get_yticks().tolist()])
     plt.legend()
     plt.subplots_adjust(
         left=0.208, bottom=0.303, right=0.958, top=0.932, wspace=0.2, hspace=0.2
